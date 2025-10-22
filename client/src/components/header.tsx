@@ -21,22 +21,22 @@ export function Header() {
       <div className="container mx-auto flex h-16 items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-8">
           <Link href="/">
-            <a className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-md px-3 py-2 transition-colors" data-testid="link-home">
+            <div className="flex items-center gap-2 hover-elevate active-elevate-2 rounded-md px-3 py-2 transition-colors cursor-pointer" data-testid="link-home">
               <Ticket className="h-6 w-6 text-primary" />
               <span className="text-xl font-bold font-[family-name:var(--font-sans)]">EventHub</span>
-            </a>
+            </div>
           </Link>
           
           <nav className="hidden md:flex items-center gap-1">
             <Link href="/">
-              <a className={`px-4 py-2 rounded-md text-sm font-medium transition-colors hover-elevate active-elevate-2 ${location === "/" ? "bg-secondary text-secondary-foreground" : "text-foreground"}`} data-testid="link-events">
+              <div className={`px-4 py-2 rounded-md text-sm font-medium transition-colors hover-elevate active-elevate-2 cursor-pointer ${location === "/" ? "bg-secondary text-secondary-foreground" : "text-foreground"}`} data-testid="link-events">
                 Events
-              </a>
+              </div>
             </Link>
             <Link href="/organizer">
-              <a className={`px-4 py-2 rounded-md text-sm font-medium transition-colors hover-elevate active-elevate-2 ${location === "/organizer" ? "bg-secondary text-secondary-foreground" : "text-foreground"}`} data-testid="link-organizer">
+              <div className={`px-4 py-2 rounded-md text-sm font-medium transition-colors hover-elevate active-elevate-2 cursor-pointer ${location === "/organizer" ? "bg-secondary text-secondary-foreground" : "text-foreground"}`} data-testid="link-organizer">
                 Become an Organizer
-              </a>
+              </div>
             </Link>
           </nav>
         </div>
@@ -57,12 +57,10 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           <Link href="/my-tickets">
-            <a>
-              <Button variant="ghost" size="icon" data-testid="button-my-tickets">
-                <Calendar className="h-5 w-5" />
-                <span className="sr-only">My Tickets</span>
-              </Button>
-            </a>
+            <Button variant="ghost" size="icon" data-testid="button-my-tickets">
+              <Calendar className="h-5 w-5" />
+              <span className="sr-only">My Tickets</span>
+            </Button>
           </Link>
           <ThemeToggle />
         </div>

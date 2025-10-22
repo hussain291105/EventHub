@@ -10,6 +10,7 @@ import { ShoppingCartComponent, type CartItem } from "@/components/shopping-cart
 import Home from "@/pages/home";
 import EventDetail from "@/pages/event-detail";
 import CheckoutPage from "@/pages/checkout";
+import PaymentSuccess from "@/pages/payment-success";
 import MyTickets from "@/pages/my-tickets";
 import Organizer from "@/pages/organizer";
 import NotFound from "@/pages/not-found";
@@ -70,8 +71,31 @@ function Router() {
 
   const handleClearCart = () => {
     setCartItems([]);
+    localStorage.removeItem("cart");
     setLocation("/my-tickets");
   };
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const savedCart = localStorage.getItem("cart");
+      if (!savedCart) {
+        setCartItems([]);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    const interval = setInterval(() => {
+      const savedCart = localStorage.getItem("cart");
+      if (!savedCart && cartItems.length > 0) {
+        setCartItems([]);
+      }
+    }, 500);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [cartItems.length]);
 
   return (
     <div className="min-h-screen">
@@ -91,6 +115,7 @@ function Router() {
         <Route path="/checkout">
           {() => <CheckoutPage cartItems={cartItems} onClearCart={handleClearCart} />}
         </Route>
+        <Route path="/payment-success" component={PaymentSuccess} />
         <Route path="/my-tickets" component={MyTickets} />
         <Route path="/organizer" component={Organizer} />
         <Route component={NotFound} />

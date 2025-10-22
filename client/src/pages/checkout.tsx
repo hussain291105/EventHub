@@ -8,15 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Lock } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ArrowLeft, Lock, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { CartItem } from "@/components/shopping-cart";
 
-if (!import.meta.env.VITE_STRIPE_PUBLIC_KEY) {
-  throw new Error('Missing required Stripe key: VITE_STRIPE_PUBLIC_KEY');
-}
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY);
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 interface CheckoutFormProps {
   cartItems: CartItem[];
@@ -94,6 +93,24 @@ export default function CheckoutPage({ cartItems, onClearCart }: CheckoutPagePro
   const [customerEmail, setCustomerEmail] = useState("");
   const [step, setStep] = useState<"info" | "payment">("info");
   const { toast } = useToast();
+
+  if (!stripePublicKey) {
+    return (
+      <div className="min-h-screen bg-background py-12">
+        <div className="container mx-auto px-4 max-w-2xl">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Payment processing is not configured. Please contact support or configure Stripe API keys.
+            </AlertDescription>
+          </Alert>
+          <Button onClick={() => setLocation("/")} className="mt-4">
+            Return to Events
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const serviceFee = Math.round(subtotal * 0.1);
