@@ -13,13 +13,25 @@ declare module "http" {
   }
 }
 
-// ✅ Enable CORS for your deployed frontend
+// ✅ Enable CORS - configure allowed origins
+const allowedOrigins = [
+  "http://localhost:5173", // Local development
+  process.env.FRONTEND_URL, // Production frontend URL from environment variable
+].filter(Boolean); // Remove undefined values
+
 app.use(
   cors({
-    origin: [
-      "https://eventhub-frontend.onrender.com", // replace with your actual frontend Render URL
-      "http://localhost:5173", // for local dev (optional)
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.some(allowed => origin.startsWith(allowed as string))) {
+        callback(null, true);
+      } else {
+        console.warn(`CORS blocked origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
