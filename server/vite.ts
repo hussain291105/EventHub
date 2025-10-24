@@ -71,9 +71,9 @@ export function serveStatic(app: Express) {
   const distPath = path.resolve(import.meta.dirname, "public");
 
   if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
+    log("Frontend build directory not found - running in API-only mode", "express");
+    log("This is normal for separate frontend/backend deployments", "express");
+    return; // Don't throw error, just skip static file serving
   }
 
   app.use(express.static(distPath));
