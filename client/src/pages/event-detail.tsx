@@ -207,7 +207,7 @@ export default function EventDetail({ onAddToCart }: EventDetailProps) {
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold">${(ticketType.price / 100).toFixed(2)}</p>
+                          <p className="text-2xl font-bold">₹{(ticketType.price / 100).toFixed(2)}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
@@ -268,7 +268,7 @@ export default function EventDetail({ onAddToCart }: EventDetailProps) {
                     <div key={ticketTypeId} className="flex justify-between text-sm">
                       <span>{ticketType.name} x {quantity}</span>
                       <span className="font-medium">
-                        ${((ticketType.price * quantity) / 100).toFixed(2)}
+                        ₹{((ticketType.price * quantity) / 100).toFixed(2)}
                       </span>
                     </div>
                   );
@@ -286,7 +286,7 @@ export default function EventDetail({ onAddToCart }: EventDetailProps) {
                         {seat.section} - Row {seat.row} - Seat {seat.number}
                       </span>
                       <span className="font-medium">
-                        ${(ticketType.price / 100).toFixed(2)}
+                        ₹{(ticketType.price / 100).toFixed(2)}
                       </span>
                     </div>
                   );
@@ -305,7 +305,7 @@ export default function EventDetail({ onAddToCart }: EventDetailProps) {
                   <div className="flex justify-between font-semibold text-lg mb-4">
                     <span>Total</span>
                     <span data-testid="text-order-total">
-                      ${(
+                      ₹{(
                         (Object.entries(quantities).reduce((sum, [id, q]) => {
                           const tt = ticketTypes.find((t) => t.id === id);
                           return sum + (tt ? tt.price * q : 0);

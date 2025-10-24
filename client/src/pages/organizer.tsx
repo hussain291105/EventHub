@@ -77,10 +77,21 @@ export default function Organizer() {
       setIsDialogOpen(false);
       resetForm();
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('Event creation error:', error);
+      let errorMessage = "Failed to create event";
+      
+      if (error?.data) {
+        if (error.data.errors) {
+          errorMessage = `Validation failed: ${error.data.errors.map((e: any) => e.message).join(', ')}`;
+        } else if (error.data.message) {
+          errorMessage = error.data.message;
+        }
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to create event",
+        description: errorMessage,
         variant: "destructive",
       });
     },
@@ -118,10 +129,11 @@ export default function Organizer() {
   };
 
   const handleSubmit = () => {
-    if (!eventForm.title || !eventForm.description || !eventForm.date || !eventForm.venue || !eventForm.location) {
+    // Basic validation
+    if (!eventForm.title || !eventForm.description || !eventForm.venue || !eventForm.location) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields: title, description, venue, location",
         variant: "destructive",
       });
       return;
@@ -134,7 +146,7 @@ export default function Organizer() {
     if (validTicketTypes.length === 0) {
       toast({
         title: "Missing Ticket Types",
-        description: "Please add at least one ticket type",
+        description: "Please add at least one complete ticket type",
         variant: "destructive",
       });
       return;
@@ -142,16 +154,31 @@ export default function Organizer() {
 
     const imageUrl = categoryImages[eventForm.category || "Music"] || concertImage;
 
+    // Prepare event data for mock storage
+    const eventData = {
+      title: eventForm.title,
+      description: eventForm.description,
+      category: eventForm.category || "Music",
+      date: eventForm.date || new Date(),
+      venue: eventForm.venue,
+      location: eventForm.location,
+      imageUrl,
+      organizerId: "organizer-1",
+    };
+
+    const ticketTypesData = validTicketTypes.map((tt) => ({
+      name: tt.name!,
+      description: tt.description!,
+      price: tt.price!,
+      totalQuantity: tt.totalQuantity!,
+      availableQuantity: tt.totalQuantity!,
+    }));
+
+    console.log('Submitting event:', { event: eventData, ticketTypes: ticketTypesData });
+
     createEventMutation.mutate({
-      event: {
-        ...eventForm,
-        imageUrl,
-        organizerId: "organizer-1",
-      } as InsertEvent,
-      ticketTypes: validTicketTypes.map((tt) => ({
-        ...tt,
-        availableQuantity: tt.totalQuantity!,
-      })) as Omit<InsertTicketType, "eventId">[],
+      event: eventData,
+      ticketTypes: ticketTypesData,
     });
   };
 
@@ -231,7 +258,10 @@ export default function Organizer() {
                       id="date"
                       type="datetime-local"
                       value={eventForm.date ? new Date(eventForm.date).toISOString().slice(0, 16) : ""}
-                      onChange={(e) => setEventForm({ ...eventForm, date: new Date(e.target.value) })}
+                      onChange={(e) => {
+                        const dateValue = e.target.value ? new Date(e.target.value) : undefined;
+                        setEventForm({ ...eventForm, date: dateValue });
+                      }}
                       data-testid="input-event-date"
                     />
                   </div>
@@ -244,7 +274,7 @@ export default function Organizer() {
                       id="venue"
                       value={eventForm.venue || ""}
                       onChange={(e) => setEventForm({ ...eventForm, venue: e.target.value })}
-                      placeholder="Madison Square Garden"
+                      placeholder="Please enter the venue......"
                       data-testid="input-event-venue"
                     />
                   </div>
@@ -310,7 +340,7 @@ export default function Organizer() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label>Price (USD) *</Label>
+                            <Label>Price *</Label>
                             <Input
                               type="number"
                               value={tt.price ? tt.price / 100 : ""}

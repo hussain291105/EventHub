@@ -15,7 +15,8 @@ export default function PaymentSuccess() {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          setLocation("/my-tickets");
+          // Use setTimeout to defer the navigation to avoid setState during render
+          setTimeout(() => setLocation("/my-tickets"), 0);
           return 0;
         }
         return prev - 1;

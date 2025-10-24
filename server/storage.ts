@@ -117,7 +117,11 @@ export class MemStorage implements IStorage {
 
   async createSeat(insertSeat: InsertSeat): Promise<Seat> {
     const id = randomUUID();
-    const seat: Seat = { ...insertSeat, id };
+    const seat: Seat = { 
+      ...insertSeat, 
+      id,
+      isAvailable: insertSeat.isAvailable ?? true 
+    };
     this.seats.set(id, seat);
     return seat;
   }
@@ -144,6 +148,7 @@ export class MemStorage implements IStorage {
       ...insertBooking,
       id,
       createdAt: new Date(),
+      paymentIntentId: insertBooking.paymentIntentId ?? null,
     };
     this.bookings.set(id, booking);
     return booking;
@@ -159,7 +164,7 @@ export class MemStorage implements IStorage {
       this.bookings.set(id, {
         ...booking,
         paymentStatus: status,
-        paymentIntentId,
+        paymentIntentId: paymentIntentId ?? null,
       });
     }
   }
@@ -171,7 +176,11 @@ export class MemStorage implements IStorage {
 
   async createBookingItem(insertBookingItem: InsertBookingItem): Promise<BookingItem> {
     const id = randomUUID();
-    const bookingItem: BookingItem = { ...insertBookingItem, id };
+    const bookingItem: BookingItem = { 
+      ...insertBookingItem, 
+      id,
+      seatId: insertBookingItem.seatId ?? null 
+    };
     this.bookingItems.set(id, bookingItem);
     return bookingItem;
   }

@@ -2,24 +2,61 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
 import { storage } from "./storage";
-import { insertEventSchema, insertTicketTypeSchema, insertBookingSchema } from "@shared/schema";
 import QRCode from "qrcode";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+// Simple interfaces for mock storage
+interface SimpleEvent {
+  title: string;
+  description: string;
+  category: string;
+  date: Date;
+  venue: string;
+  location: string;
+  imageUrl: string;
+  organizerId: string;
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: "2024-11-20.acacia",
-});
+interface SimpleTicketType {
+  eventId: string;
+  name: string;
+  description: string;
+  price: number;
+  totalQuantity: number;
+  availableQuantity: number;
+}
+
+const ENABLE_MOCK_PAYMENTS = process.env.ENABLE_MOCK_PAYMENTS === 'true';
+
+let stripe: Stripe | null = null;
+
+if (process.env.STRIPE_SECRET_KEY && process.env.STRIPE_SECRET_KEY.startsWith('sk_')) {
+  try {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: "2025-09-30.clover",
+    });
+    console.log('Stripe initialized successfully');
+  } catch (error) {
+    console.warn('Failed to initialize Stripe:', error);
+    if (!ENABLE_MOCK_PAYMENTS) {
+      throw new Error('Stripe configuration failed and mock payments are disabled');
+    }
+  }
+} else {
+  console.warn('Stripe secret key not configured properly');
+  if (!ENABLE_MOCK_PAYMENTS) {
+    throw new Error('Missing required Stripe secret: STRIPE_SECRET_KEY');
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get all events
   app.get("/api/events", async (req, res) => {
     try {
       const events = await storage.getEvents();
+      console.log(`Returning ${events.length} events`);
       res.json(events);
     } catch (error: any) {
+      console.error('Error fetching events:', error);
       res.status(500).json({ message: error.message });
     }
   });
@@ -37,25 +74,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create event with ticket types
+  // Create event with ticket types (simplified mock version)
   app.post("/api/events", async (req, res) => {
     try {
+      console.log('Event creation request body:', JSON.stringify(req.body, null, 2));
+      
       const { event: eventData, ticketTypes } = req.body;
       
-      const validatedEvent = insertEventSchema.parse(eventData);
-      const event = await storage.createEvent(validatedEvent);
+      // Basic validation
+      if (!eventData || !eventData.title || !eventData.description || !eventData.venue || !eventData.location) {
+        return res.status(400).json({ message: "Missing required event fields: title, description, venue, location" });
+      }
+      
+      if (!ticketTypes || !Array.isArray(ticketTypes) || ticketTypes.length === 0) {
+        return res.status(400).json({ message: "At least one ticket type is required" });
+      }
+      
+      // Create event with mock data approach - no strict validation
+      const eventToCreate: SimpleEvent = {
+        title: eventData.title,
+        description: eventData.description,
+        category: eventData.category || "Music",
+        date: eventData.date ? (typeof eventData.date === 'string' ? new Date(eventData.date) : eventData.date) : new Date(),
+        venue: eventData.venue,
+        location: eventData.location,
+        imageUrl: eventData.imageUrl || "/assets/generated_images/Concert_festival_crowd_image_7174c499.png",
+        organizerId: eventData.organizerId || "organizer-1"
+      };
+      
+      console.log('Creating event:', eventToCreate);
+      const event = await storage.createEvent(eventToCreate as any);
+      console.log('Event created successfully:', event.id);
 
+      // Create ticket types
       for (const ticketTypeData of ticketTypes) {
-        const validatedTicketType = insertTicketTypeSchema.parse({
-          ...ticketTypeData,
-          eventId: event.id,
-        });
-        await storage.createTicketType(validatedTicketType);
+        if (ticketTypeData.name && ticketTypeData.description && ticketTypeData.price && ticketTypeData.totalQuantity) {
+          const ticketType: SimpleTicketType = {
+            eventId: event.id,
+            name: ticketTypeData.name,
+            description: ticketTypeData.description,
+            price: ticketTypeData.price,
+            totalQuantity: ticketTypeData.totalQuantity,
+            availableQuantity: ticketTypeData.availableQuantity || ticketTypeData.totalQuantity
+          };
+          
+          await storage.createTicketType(ticketType as any);
+          console.log('Ticket type created:', ticketType.name);
+        }
       }
 
       res.json(event);
     } catch (error: any) {
-      res.status(400).json({ message: error.message });
+      console.error('Event creation error:', error);
+      res.status(500).json({ message: "Failed to create event: " + error.message });
     }
   });
 
@@ -94,17 +165,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { amount, customerEmail, customerName, cartItems } = req.body;
 
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(amount),
-        currency: "usd",
-        receipt_email: customerEmail,
-        metadata: {
-          customerName,
-          cartItems: JSON.stringify(cartItems),
-        },
-      });
+      // Validate required fields
+      if (!amount || !customerEmail || !customerName || !cartItems || cartItems.length === 0) {
+        return res.status(400).json({ 
+          message: "Missing required fields: amount, customerEmail, customerName, or cartItems" 
+        });
+      }
 
-      const qrCode = await QRCode.toDataURL(`BOOKING-${paymentIntent.id}`);
+      // Validate amount
+      if (typeof amount !== 'number' || amount <= 0) {
+        return res.status(400).json({ 
+          message: "Invalid amount. Amount must be a positive number." 
+        });
+      }
+
+      let paymentIntent: any;
+      let paymentIntentId: string;
+
+      // Always use mock payments when ENABLE_MOCK_PAYMENTS is true
+      if (ENABLE_MOCK_PAYMENTS) {
+        // Mock payment for development
+        paymentIntentId = `pi_mock_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        paymentIntent = {
+          id: paymentIntentId,
+          client_secret: `${paymentIntentId}_secret_mock`,
+          amount: Math.round(amount),
+          currency: "inr",
+          status: "requires_payment_method",
+        };
+        console.log('Created mock payment intent:', paymentIntentId);
+      } else if (stripe) {
+        // Use real Stripe only if mock payments are disabled
+        paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(amount),
+          currency: "inr",
+          receipt_email: customerEmail,
+          metadata: {
+            customerName,
+            cartItems: JSON.stringify(cartItems),
+          },
+        });
+        paymentIntentId = paymentIntent.id;
+      } else {
+        throw new Error('No payment method available. Enable mock payments or configure Stripe.');
+      }
+
+      const qrCode = await QRCode.toDataURL(`BOOKING-${paymentIntentId}`);
 
       const booking = await storage.createBooking({
         eventId: cartItems[0]?.eventId || "unknown",
@@ -112,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerEmail,
         totalAmount: amount,
         paymentStatus: "pending",
-        paymentIntentId: paymentIntent.id,
+        paymentIntentId: paymentIntentId,
         qrCode,
       });
 
@@ -144,15 +250,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mock payment confirmation endpoint for development
+  app.post("/api/confirm-mock-payment", async (req, res) => {
+    try {
+      const { paymentIntentId, paymentMethod, paymentDetails } = req.body;
+      
+      if (!ENABLE_MOCK_PAYMENTS) {
+        return res.status(400).json({ message: "Mock payments are disabled" });
+      }
+
+      if (!paymentIntentId || !paymentIntentId.startsWith('pi_mock_')) {
+        return res.status(400).json({ message: "Invalid mock payment intent ID" });
+      }
+
+      // Find booking by payment intent ID
+      const bookings = await storage.getBookings();
+      const booking = bookings.find(b => b.paymentIntentId === paymentIntentId);
+      
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+
+      // Simulate payment processing delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Update booking status to completed
+      await storage.updateBookingPaymentStatus(booking.id, "succeeded", paymentIntentId);
+
+      console.log(`Mock payment processed successfully:`, {
+        paymentIntentId,
+        paymentMethod,
+        bookingId: booking.id,
+        amount: booking.totalAmount,
+        paymentDetails: paymentMethod === 'card' ? 
+          `Card ending in ${paymentDetails.last4}` : 
+          `Bank: ${paymentDetails.bankName}`
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Mock payment confirmed successfully",
+        bookingId: booking.id,
+        paymentMethod,
+        transactionId: `txn_mock_${Date.now()}`,
+        paymentDetails: paymentMethod === 'card' ? {
+          type: 'card',
+          last4: paymentDetails.last4,
+          cardholderName: paymentDetails.cardholderName
+        } : {
+          type: 'bank',
+          bankName: paymentDetails.bankName,
+          accountLast4: paymentDetails.accountNumber
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ message: "Error confirming mock payment: " + error.message });
+    }
+  });
+
   // Get all bookings with event and ticket details
   app.get("/api/bookings", async (req, res) => {
     try {
       const bookings = await storage.getBookings();
+      console.log(`Found ${bookings.length} bookings:`, bookings.map(b => ({ id: b.id, status: b.paymentStatus, eventId: b.eventId })));
+      
+      // Only return successful bookings for the tickets page
+      const successfulBookings = bookings.filter(booking => booking.paymentStatus === 'succeeded');
+      console.log(`Filtered to ${successfulBookings.length} successful bookings`);
       
       const bookingsWithDetails = await Promise.all(
-        bookings.map(async (booking) => {
+        successfulBookings.map(async (booking) => {
           const event = await storage.getEvent(booking.eventId);
           const items = await storage.getBookingItems(booking.id);
+          
+          if (!event) {
+            console.warn(`Event not found for booking ${booking.id}, eventId: ${booking.eventId}`);
+            return null;
+          }
           
           const itemsWithTicketTypes = await Promise.all(
             items.map(async (item) => {
@@ -169,7 +343,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
 
-      res.json(bookingsWithDetails);
+      // Filter out null results
+      const validBookings = bookingsWithDetails.filter(booking => booking !== null);
+      console.log(`Returning ${validBookings.length} valid bookings with details`);
+
+      res.json(validBookings);
+    } catch (error: any) {
+      console.error('Error fetching bookings:', error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Debug endpoint to check all bookings (development only)
+  app.get("/api/debug/bookings", async (req, res) => {
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(404).json({ message: "Not found" });
+    }
+    
+    try {
+      const bookings = await storage.getBookings();
+      const events = await storage.getEvents();
+      
+      res.json({
+        bookings,
+        events: events.map(e => ({ id: e.id, title: e.title })),
+        totalBookings: bookings.length,
+        successfulBookings: bookings.filter(b => b.paymentStatus === 'succeeded').length
+      });
     } catch (error: any) {
       res.status(500).json({ message: error.message });
     }

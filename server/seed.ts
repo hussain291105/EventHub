@@ -148,7 +148,7 @@ const seedEvents: Array<{
       date: new Date("2024-07-05T20:00:00"),
       venue: "Comedy Cellar",
       location: "New York, NY",
-      imageUrl: "/assets/generated_images/Theater_venue_image_7743119b.png",
+      imageUrl: "/assets/generated_images/Comedy_club_venue_image_8b4d2f91.svg",
       organizerId: ORGANIZER_ID,
     },
     ticketTypes: [
@@ -176,7 +176,7 @@ const seedEvents: Array<{
       date: new Date("2024-06-25T18:00:00"),
       venue: "MoMA",
       location: "New York, NY",
-      imageUrl: "/assets/generated_images/Theater_venue_image_7743119b.png",
+      imageUrl: "/assets/generated_images/Modern_art_gallery_image_c3f7e829.svg",
       organizerId: ORGANIZER_ID,
     },
     ticketTypes: [
@@ -196,14 +196,45 @@ const seedEvents: Array<{
       },
     ],
   },
+  {
+    event: {
+      title: "NYC Street Food Festival",
+      description: "Discover the best street food from around the world in one amazing location. Over 50 food vendors, live music, and family-friendly activities.",
+      category: "Food",
+      date: new Date("2024-08-25T11:00:00"),
+      venue: "Brooklyn Bridge Park",
+      location: "Brooklyn, NY",
+      imageUrl: "/assets/generated_images/Food_festival_image_d9e8a7b6.svg",
+      organizerId: ORGANIZER_ID,
+    },
+    ticketTypes: [
+      {
+        name: "General Entry",
+        description: "Access to all food vendors and activities",
+        price: 2500,
+        totalQuantity: 1000,
+        availableQuantity: 1000,
+      },
+      {
+        name: "VIP Foodie Pass",
+        description: "Includes $50 food credit and priority access",
+        price: 7500,
+        totalQuantity: 200,
+        availableQuantity: 200,
+      },
+    ],
+  },
 ];
 
 export async function seedDatabase() {
   const existingEvents = await storage.getEvents();
   
   if (existingEvents.length > 0) {
-    console.log("Database already seeded, skipping...");
-    return;
+    console.log("Clearing existing data and re-seeding with updated images...");
+    // Clear existing data for fresh seed with new images
+    for (const event of existingEvents) {
+      await storage.deleteEvent(event.id);
+    }
   }
 
   console.log("Seeding database with initial events...");

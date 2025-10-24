@@ -83,7 +83,7 @@ export default function MyTickets() {
               <p className="text-sm font-medium">Tickets:</p>
               {booking.items?.map((item, index) => (
                 <div key={index} className="text-sm text-muted-foreground">
-                  {item.ticketType?.name} x {item.quantity} - ${((item.price * item.quantity) / 100).toFixed(2)}
+                  {item.ticketType?.name} x {item.quantity} - ₹{((item.price * item.quantity) / 100).toFixed(2)}
                 </div>
               ))}
             </div>

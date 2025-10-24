@@ -81,7 +81,7 @@ export function ShoppingCartComponent({ items, onRemoveItem, onCheckout }: Shopp
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-sm">Qty: {item.quantity}</span>
-                      <span className="font-semibold">${(item.price * item.quantity / 100).toFixed(2)}</span>
+                      <span className="font-semibold">₹{(item.price * item.quantity / 100).toFixed(2)}</span>
                     </div>
                   </div>
                   <Button
@@ -105,16 +105,16 @@ export function ShoppingCartComponent({ items, onRemoveItem, onCheckout }: Shopp
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>${(subtotal / 100).toFixed(2)}</span>
+                  <span>₹{(subtotal / 100).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-muted-foreground">
                   <span>Service Fee</span>
-                  <span>${(serviceFee / 100).toFixed(2)}</span>
+                  <span>₹{(serviceFee / 100).toFixed(2)}</span>
                 </div>
                 <Separator />
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total</span>
-                  <span data-testid="text-cart-total">${(total / 100).toFixed(2)}</span>
+                  <span data-testid="text-cart-total">₹{(total / 100).toFixed(2)}</span>
                 </div>
               </div>
               <Button className="w-full" onClick={onCheckout} data-testid="button-checkout">
